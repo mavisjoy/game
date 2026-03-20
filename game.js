@@ -71,6 +71,15 @@ class SoundManager {
         osc.stop(this.audioContext.currentTime + 0.5);
     }
 
+    speakGameOver() {
+        if (!this.enabled) return;
+        const utterance = new SpeechSynthesisUtterance("You are doomed!");
+        utterance.rate = 0.8;
+        utterance.pitch = 0.5;
+        utterance.volume = 1.0;
+        window.speechSynthesis.speak(utterance);
+    }
+
     playGhostEaten() {
         if (!this.enabled || !this.audioContext) return;
         const osc = this.audioContext.createOscillator();
@@ -582,6 +591,7 @@ class Game {
     endGame() {
         this.gameRunning = false;
         this.gameOver = true;
+        this.sound.speakGameOver();
     }
 
     updateUI() {
