@@ -73,11 +73,37 @@ class SoundManager {
 
     speakGameOver() {
         if (!this.enabled) return;
-        const utterance = new SpeechSynthesisUtterance("You are doomed!");
-        utterance.rate = 0.8;
-        utterance.pitch = 0.5;
-        utterance.volume = 1.0;
-        window.speechSynthesis.speak(utterance);
+        
+        // Baby crying sound
+        if (this.audioContext) {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+            osc.type = 'sine';
+            
+            // Crying sound effect
+            osc.frequency.setValueAtTime(400, this.audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(600, this.audioContext.currentTime + 0.2);
+            osc.frequency.exponentialRampToValueAtTime(400, this.audioContext.currentTime + 0.4);
+            osc.frequency.exponentialRampToValueAtTime(600, this.audioContext.currentTime + 0.6);
+            osc.frequency.exponentialRampToValueAtTime(300, this.audioContext.currentTime + 1);
+            
+            gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 1);
+            
+            osc.start();
+            osc.stop(this.audioContext.currentTime + 1);
+        }
+        
+        // Voice message
+        setTimeout(() => {
+            const utterance = new SpeechSynthesisUtterance("MOMMY! I lost a Labubu!");
+            utterance.rate = 1.2;
+            utterance.pitch = 1.8; // High pitch for baby voice
+            utterance.volume = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }, 1000);
     }
 
     playGhostEaten() {
@@ -226,12 +252,48 @@ class PacMan {
         const angles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
         ctx.rotate(angles[this.direction]);
 
-        // Draw Pac-Man
+        // Draw Baby character
+        const size = TILE_SIZE / 2 + 2;
+        
+        // Head (round)
         ctx.beginPath();
-        ctx.fillStyle = COLORS.pacman;
-        const mouthAngle = this.mouthOpen * 0.4;
-        ctx.arc(0, 0, TILE_SIZE / 2 + 2, mouthAngle, Math.PI * 2 - mouthAngle);
-        ctx.lineTo(0, 0);
+        ctx.fillStyle = '#FFD4A3'; // Peach/skin color
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(-size * 0.3, -size * 0.2, size * 0.2, 0, Math.PI * 2);
+        ctx.arc(size * 0.3, -size * 0.2, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye sparkles
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(-size * 0.25, -size * 0.25, size * 0.1, 0, Math.PI * 2);
+        ctx.arc(size * 0.35, -size * 0.25, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Mouth (open/close animation)
+        if (this.mouthOpen > 0.3) {
+            ctx.fillStyle = '#FF6B9D';
+            ctx.beginPath();
+            ctx.arc(0, size * 0.3, size * 0.3, 0, Math.PI);
+            ctx.fill();
+        } else {
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, size * 0.2, size * 0.3, 0, Math.PI);
+            ctx.stroke();
+        }
+        
+        // Rosy cheeks
+        ctx.fillStyle = 'rgba(255, 182, 193, 0.5)';
+        ctx.beginPath();
+        ctx.arc(-size * 0.6, size * 0.1, size * 0.2, 0, Math.PI * 2);
+        ctx.arc(size * 0.6, size * 0.1, size * 0.2, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -360,72 +422,100 @@ class Ghost {
         ctx.save();
         const x = this.x + TILE_SIZE / 2;
         const y = this.y + TILE_SIZE / 2;
-        const radius = TILE_SIZE / 2 + 2;
+        const size = TILE_SIZE / 2 + 2;
 
-        // Ghost body
+        // Draw Labubu character - mischievous forest spirit
+        // Large head/body (rounded, slightly hunched)
         ctx.beginPath();
-        ctx.fillStyle = this.frightened ? COLORS.frightened : this.color;
+        ctx.fillStyle = this.frightened ? '#9370DB' : this.color;
+        ctx.ellipse(x, y + size * 0.1, size * 0.9, size, 0, 0, Math.PI * 2);
+        ctx.fill();
         
-        // Head (semicircle)
-        ctx.arc(x, y - 2, radius, Math.PI, 0);
-        
-        // Body
-        ctx.lineTo(x + radius, y + radius - 4);
-        
-        // Wavy bottom
-        const waveCount = 3;
-        const waveWidth = (radius * 2) / waveCount;
-        for (let i = 0; i < waveCount; i++) {
-            const waveX = x + radius - (i + 1) * waveWidth;
-            ctx.quadraticCurveTo(
-                waveX + waveWidth / 2, y + radius + 4,
-                waveX, y + radius - 4
-            );
-        }
-        
+        // OVERSIZED bat/elf-like pointed ears (asymmetrical)
+        ctx.fillStyle = this.frightened ? '#9370DB' : this.color;
+        // Left ear - upright
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.7, y - size * 0.5);
+        ctx.lineTo(x - size * 0.9, y - size * 1.2);
+        ctx.lineTo(x - size * 0.4, y - size * 0.6);
         ctx.closePath();
         ctx.fill();
-
-        // Eyes
-        if (!this.frightened) {
-            // White part
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(x - 4, y - 4, 4, 0, Math.PI * 2);
-            ctx.arc(x + 4, y - 4, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Pupils
-            ctx.fillStyle = '#00f';
-            let pupilOffsetX = 0, pupilOffsetY = 0;
-            switch (this.direction) {
-                case 'up': pupilOffsetY = -2; break;
-                case 'down': pupilOffsetY = 2; break;
-                case 'left': pupilOffsetX = -2; break;
-                case 'right': pupilOffsetX = 2; break;
-            }
-            ctx.beginPath();
-            ctx.arc(x - 4 + pupilOffsetX, y - 4 + pupilOffsetY, 2, 0, Math.PI * 2);
-            ctx.arc(x + 4 + pupilOffsetX, y - 4 + pupilOffsetY, 2, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            // Frightened face
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(x - 4, y - 2, 2, 0, Math.PI * 2);
-            ctx.arc(x + 4, y - 2, 2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Wavy mouth
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(x - 6, y + 4);
-            for (let i = 0; i < 4; i++) {
-                ctx.lineTo(x - 6 + i * 4 + 2, y + (i % 2 === 0 ? 6 : 2));
-            }
-            ctx.stroke();
-        }
+        
+        // Right ear - tilted
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.7, y - size * 0.4);
+        ctx.lineTo(x + size * 1.1, y - size * 1.0);
+        ctx.lineTo(x + size * 0.5, y - size * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Large expressive eyes (asymmetrical - one wide, one narrow)
+        ctx.fillStyle = '#FFFF00'; // Yellow eyes
+        ctx.beginPath();
+        // Left eye - wide open
+        ctx.ellipse(x - size * 0.35, y - size * 0.3, size * 0.25, size * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Right eye - narrower
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.35, y - size * 0.25, size * 0.2, size * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Black pupils
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.35, y - size * 0.25, size * 0.12, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.35, y - size * 0.2, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye sparkles
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.06, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.38, y - size * 0.25, size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Wide mischievous grin
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y + size * 0.3, size * 0.4, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+        
+        // Sharp jagged FANGS protruding (most recognizable feature!)
+        ctx.fillStyle = '#FFF';
+        // Left fang
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y + size * 0.25);
+        ctx.lineTo(x - size * 0.2, y + size * 0.5);
+        ctx.lineTo(x - size * 0.15, y + size * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Right fang
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.15, y + size * 0.25);
+        ctx.lineTo(x + size * 0.2, y + size * 0.5);
+        ctx.lineTo(x + size * 0.25, y + size * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Additional small teeth
+        ctx.fillRect(x - size * 0.1, y + size * 0.25, size * 0.05, size * 0.15);
+        ctx.fillRect(x + size * 0.05, y + size * 0.25, size * 0.05, size * 0.15);
+        
+        // Outline fangs
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y + size * 0.25);
+        ctx.lineTo(x - size * 0.2, y + size * 0.5);
+        ctx.lineTo(x - size * 0.15, y + size * 0.25);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.15, y + size * 0.25);
+        ctx.lineTo(x + size * 0.2, y + size * 0.5);
+        ctx.lineTo(x + size * 0.25, y + size * 0.25);
+        ctx.stroke();
 
         ctx.restore();
     }
